@@ -60,6 +60,40 @@ void serialInit(baudSpeed_t speed)
   }
 }
 
+/*
+ * This function reads data from the serial port.
+ * 
+ * Inputs:
+ *  - in: input data
+ * 
+ * return value: number of bytes read
+ * 
+ */
+int readDataFromSerial(int *in)
+{
+  int returnValue = Serial.available();
+  if (returnValue > 0)
+  {
+    *in = Serial.read();
+  }
+  return returnValue;
+}
+
+/*
+ * Outputs data on the serial port
+ * 
+ * Inputs:
+ *  - data: pointer to the data to be ouput
+ *          (should be the same as input to readDataFromSerial)
+ * 
+ * return value: None
+ * 
+ */
+void outputDataOnSerial(int *data)
+{
+  Serial.write(*data);
+}
+
 /*******************************************************************************
  *                                                                             *
  * Init function                                                               *
@@ -82,15 +116,14 @@ void setup()
  *******************************************************************************/
 void loop() 
 {
-  int in_byte;
+  int input;
+  int numData = 0;
 
-  if (Serial.available() > 0)
-  {
-    in_byte = Serial.read();
-
-    Serial.write(in_byte);
-  }
+  numData = readDataFromSerial(&input);
   
-
+  if (numData)
+  {
+    outputDataOnSerial(&input);
+  }
   
 }
