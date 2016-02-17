@@ -6,7 +6,21 @@
  * Version history:
  * 2016-02-15 (dannyno): Created
  * 2016-02-15 (dannyno): Create some interaction with the serial console
+ * 2016-02-15 (dannyno): Include TMI library
  */
+
+/*******************************************************************************
+ *                                                                             *
+ * Included libraries                                                          *
+ *                                                                             *
+ *******************************************************************************/
+
+/*
+ * This library can be downloaded from https://github.com/dannyno/TMI
+ * For information on installing libraries, see: http://www.arduino.cc/en/Guide/Libraries 
+ */
+#include <TMI_types.h>
+#include <TMI.h>
 
 /*******************************************************************************
  *                                                                             *
@@ -14,6 +28,7 @@
  *                                                                             *
  *******************************************************************************/
 #define WELCOME_STRING "-- ThermoUNO welcome --"
+
 typedef enum{
   BAUD_300 = 300L,
   BAUD_600 = 600L,
@@ -30,11 +45,89 @@ typedef enum{
   BAUD_115200 = 115200L
 } baudSpeed_t;
 
+/* Test table */
+enum TableIndices
+{
+    TOP_MENU,
+    SUB_MENU_1,
+    SUB_MENU_1_1,
+    SUB_MENU_1_1_1,
+    SUB_MENU_1_1_2,
+    SUB_MENU_1_1_3,
+
+    SUB_MENU_1_2,
+    
+    SUB_MENU_2,
+    SUB_MENU_2_1,
+    SUB_MENU_2_2,
+    
+    TABLE_LENGTH
+};
+
+/* Local prototypes */
+int dummyAction(void);
+
+static const TMI_item test_cli_struct[] = {
+    /*{INDEX, DESCRIPTION_TEXT, PARENT, BELOW, THROUGH, action}*/
+    {TOP_MENU, "Top menu, where do you want to go?", NO_PARENT, NO_BELOW, SUB_MENU_1, NULL},
+        {SUB_MENU_1, "Sub menu 1", TOP_MENU, SUB_MENU_2, SUB_MENU_1_1, NULL},
+            {SUB_MENU_1_1, "Sub menu 1-1", SUB_MENU_1, SUB_MENU_1_2, SUB_MENU_1_1_1, NULL},
+                {SUB_MENU_1_1_1, "Sub menu 1-1-1", SUB_MENU_1_1, SUB_MENU_1_1_2, NO_ELDER, &dummyAction},
+                {SUB_MENU_1_1_2, "Sub menu 1-1-2", SUB_MENU_1_1, SUB_MENU_1_1_3, NO_ELDER, &dummyAction},
+                {SUB_MENU_1_1_3, "Sub menu 1-1-3", SUB_MENU_1_1, NO_BELOW, NO_ELDER, &dummyAction},
+            {SUB_MENU_1_2, "Sub menu 1-2", SUB_MENU_1, NO_BELOW, NO_ELDER, &dummyAction},
+        {SUB_MENU_2, "Sub menu 2", TOP_MENU, NO_BELOW, SUB_MENU_2_1, NULL},
+            {SUB_MENU_2_1, "Sub menu 2-1", SUB_MENU_2, SUB_MENU_2_2, NO_ELDER, &dummyAction},
+            {SUB_MENU_2_2, "Sub menu 2-2", SUB_MENU_2, NO_BELOW, NO_ELDER, &dummyAction},
+    {TABLE_LENGTH, "", NO_PARENT, NO_BELOW, NO_ELDER, NULL}
+};
+
 /*******************************************************************************
  *                                                                             *
  * Functions                                                                   *
  *                                                                             *
  *******************************************************************************/
+
+// Function to print the menu from current item:
+void printMenu(const TMI_item * pTable, unsigned int index)
+{
+    unsigned int currentIndex = index;
+    unsigned int num = 1;
+    Serial.println("0: go up -1: exit");
+    Serial.println(pTable[currentIndex].text);
+    currentIndex = pTable[currentIndex].elder;
+    if (currentIndex != 0)
+    {
+      Serial.print("\t");
+      Serial.print(num);
+      Serial.print(".");
+      num++;
+      Serial.println(pTable[currentIndex].text);
+      while (pTable[currentIndex].below != NO_BELOW)
+      {
+          currentIndex = pTable[currentIndex].below;
+          Serial.print("\t");
+          Serial.print(num);
+          Serial.println(".");
+          num++;
+          Serial.println(pTable[currentIndex].text);
+      }
+    }
+}
+
+/* dummy action function */
+int dummyAction(void)
+{
+  Serial.println("Dummy action");
+  return 0;
+}
+
+/* Not super good but that works for test */
+int myPrintFunction(const char * toPrint)
+{
+  Serial.print(toPrint);
+  return 0;
+}
 
 /*
  * This function is called when initialization is done
@@ -102,7 +195,7 @@ void outputDataOnSerial(int *data)
 void setup() 
 {
   // init serial port to 9600 baud 
-  serialInit(BAUD_115200);
+  serialInit(BAUD_9600);
   
   // Init done
   initDone();
@@ -116,14 +209,24 @@ void setup()
  *******************************************************************************/
 void loop() 
 {
-  int input;
-  int numData = 0;
-
-  numData = readDataFromSerial(&input);
+  int myInt = 0;
+  int numRead = 0;
+  unsigned int currentIndex = 0;
+  unsigned int errCode = TMI_init(&test_cli_struct[0], TABLE_LENGTH);
   
-  if (numData)
+  Serial.print("Error Code: ");
+  Serial.print(errCode);
+  Serial.println(' ');
+  Serial.println("Whole table:");
+  TMI_display_table(&myPrintFunction);
+  while (myInt != -1)
   {
-    outputDataOnSerial(&input);
+    printMenu(&test_cli_struct[0], currentIndex);
+    numRead = readDataFromSerial(&myInt);
+    if (numRead > 0)
+    {
+      currentIndex = TMI_item_process(myInt);
+    }
   }
   
 }
