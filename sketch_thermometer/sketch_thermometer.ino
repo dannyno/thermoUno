@@ -14,6 +14,10 @@
  *                                                                             *
  *******************************************************************************/
 #define WELCOME_STRING "-- ThermoUNO welcome --"
+
+#define SERIESRESISTOR_OHM      10000
+#define THERMISTOR_ANALOG_PIN   A0
+
 typedef enum{
   BAUD_300 = 300L,
   BAUD_600 = 600L,
@@ -94,6 +98,17 @@ void outputDataOnSerial(int *data)
   Serial.write(*data);
 }
 
+/*
+ * Analog reading on A0
+ */
+float thermistorRead(void)
+{
+  float reading = analogRead(THERMISTOR_ANALOG_PIN);
+  reading = (1023 / reading) - 1;
+  reading = SERIESRESISTOR_OHM / reading;
+  return reading;
+}
+
 /*******************************************************************************
  *                                                                             *
  * Init function                                                               *
@@ -102,7 +117,7 @@ void outputDataOnSerial(int *data)
 void setup() 
 {
   // init serial port to 9600 baud 
-  serialInit(BAUD_115200);
+  serialInit(BAUD_9600);
   
   // Init done
   initDone();
@@ -116,14 +131,11 @@ void setup()
  *******************************************************************************/
 void loop() 
 {
-  int input;
-  int numData = 0;
+  float value = thermistorRead();
+  //Serial.print("Thermistor resistance: ");
+  Serial.println(value);
+  //Serial.println(" ohm");
 
-  numData = readDataFromSerial(&input);
-  
-  if (numData)
-  {
-    outputDataOnSerial(&input);
-  }
+  delay(1000);
   
 }
