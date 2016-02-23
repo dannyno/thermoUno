@@ -1,3 +1,5 @@
+#include <thermap.h>
+
 /*
  * (c) 2016 Dannyno
  * 
@@ -6,6 +8,7 @@
  * Version history:
  * 2016-02-15 (dannyno): Created
  * 2016-02-15 (dannyno): Create some interaction with the serial console
+ * 2016-02-23 (dannyno): Output a temperature
  */
 
 /*******************************************************************************
@@ -34,6 +37,39 @@ typedef enum{
   BAUD_115200 = 115200L
 } baudSpeed_t;
 
+#define NUM_ENTRIES 21
+
+const thermap_elt_t entries[NUM_ENTRIES] =
+{
+  {-40,2008000},
+  {-30,1032000},
+  {-20,551500},
+  {-10,306000},
+  {0,175500},
+  {10,103900},
+  {20,63350},
+  {25,50000},
+  {30,39710},
+  {40,25525},
+  {50,16795},
+  {60,11295},
+  {70,7750},
+  {80,5420},
+  {90,3855},
+  {100,2785},
+  {110,2040},
+  {120,1515},
+  {130,1140},
+  {140,865},
+  {150,665}
+};
+
+thermap_table_t table =
+{
+  entries,
+  NUM_ENTRIES
+};
+
 /*******************************************************************************
  *                                                                             *
  * Functions                                                                   *
@@ -46,6 +82,14 @@ typedef enum{
 void initDone()
 {
   Serial.println(WELCOME_STRING);
+  Serial.print("Table consistency: ");
+  Serial.println(thermap_check_table(&table));
+
+  Serial.print("Number of entries: ");
+  unsigned int num = thermap_get_table_length(&table);
+  Serial.println(num);
+
+  //outputTableContent();
 }
 
 /*
@@ -99,6 +143,20 @@ void outputDataOnSerial(int *data)
 }
 
 /*
+ * Displays the entire table content
+ */
+void outputTableContent(void)
+{
+  unsigned int num = thermap_get_table_length(&table);
+  for (int i = 0;i< num;i++)
+  {
+    Serial.print(table.table[i].temp);
+    Serial.print(",");
+    Serial.println(table.table[i].R);
+  }
+}
+
+/*
  * Analog reading on A0
  */
 float thermistorRead(void)
@@ -132,9 +190,8 @@ void setup()
 void loop() 
 {
   float value = thermistorRead();
-  //Serial.print("Thermistor resistance: ");
+  value = ((float)thermap_get_temp((long)value, &table) )/ 100;
   Serial.println(value);
-  //Serial.println(" ohm");
 
   delay(1000);
   
