@@ -9,6 +9,7 @@
  * 2016-02-15 (dannyno): Created
  * 2016-02-15 (dannyno): Create some interaction with the serial console
  * 2016-02-23 (dannyno): Output a temperature
+ * 2016-03-13 (dannyno): take the average of 10 values
  */
 
 /*******************************************************************************
@@ -20,6 +21,7 @@
 
 #define SERIESRESISTOR_OHM      10000
 #define THERMISTOR_ANALOG_PIN   A0
+#define NUM_READINGS            10
 
 typedef enum{
   BAUD_300 = 300L,
@@ -189,9 +191,14 @@ void setup()
  *******************************************************************************/
 void loop() 
 {
-  float value = thermistorRead();
+  float value = 0;
+  for (int i = 0;i<NUM_READINGS;i++)
+  {
+    value += thermistorRead();
+  }
+  value /= NUM_READINGS;
   value = ((float)thermap_get_temp((long)value, &table) )/ 100;
-  Serial.println(value);
+  Serial.println(value,1);
 
   delay(1000);
   
